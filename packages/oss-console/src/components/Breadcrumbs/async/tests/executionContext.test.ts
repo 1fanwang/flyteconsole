@@ -214,7 +214,8 @@ describe('executionContext breadcrumb functions', () => {
       mockGetExecution.mockResolvedValue(createMockExecutionWithDifferentNames());
       mockFetchVersions.mockResolvedValue({ entities: [] });
       const location = {
-        pathname: '/projects/execution-project/domains/execution-domain/executions/wf-execution-001',
+        pathname:
+          '/projects/execution-project/domains/execution-domain/executions/wf-execution-001',
       } as Location;
 
       await executionTaskWorkflowVersions(location, mockBreadcrumb as any);
