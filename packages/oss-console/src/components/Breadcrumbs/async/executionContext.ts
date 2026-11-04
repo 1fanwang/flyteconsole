@@ -49,17 +49,23 @@ const getExecutionData = async (projectId: string, domainId: string, executionId
   return executionData;
 };
 
-const isExecutionTaskOrWorkflow = (executionData: Execution) => {
-  return executionData.closure.workflowId.resourceType === ResourceType.TASK
+export const isExecutionTaskOrWorkflow = (executionData: Execution) => {
+  return executionData.spec.launchPlan.resourceType === ResourceType.TASK
     ? ResourceType.TASK
     : ResourceType.WORKFLOW;
 };
 
-const getTaskOrWorkflowName = (executionData: Execution): string => {
+export const getTaskOrWorkflowName = (executionData: Execution): string => {
+  if (isExecutionTaskOrWorkflow(executionData) === ResourceType.TASK) {
+    return executionData.spec.launchPlan.name;
+  }
   return executionData.closure.workflowId.name;
 };
 
-const getTaskOrWorkflowVersion = (executionData: Execution): string => {
+export const getTaskOrWorkflowVersion = (executionData: Execution): string => {
+  if (isExecutionTaskOrWorkflow(executionData) === ResourceType.TASK) {
+    return executionData.spec.launchPlan.version;
+  }
   return executionData.closure.workflowId.version;
 };
 
@@ -159,8 +165,8 @@ export const executionTaskWorkflowVersions: BreadcrumbAsyncPopOverData = async (
   );
 
   const resourceId = {
-    project: breadcrumb.projectId,
-    domain: breadcrumb.domainId,
+    project: desinationProject,
+    domain: desinationDomain,
     name: entityResourceName,
     resourceType: executionType,
   };

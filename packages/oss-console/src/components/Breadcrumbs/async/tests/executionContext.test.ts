@@ -4,6 +4,7 @@ import {
   executonTaskWorkFlowNameAsyncValue,
   executonTaskWorkFlowNameAsyncSelfLink,
   executonNamedEntityAsyncValue,
+  executionTaskWorkflowVersions,
 } from '../executionContext';
 
 jest.mock('@clients/primitives/SimpleCache/SimpleCacheCallbackManager', () => ({
@@ -18,30 +19,9 @@ jest.mock('../../../../models/Execution/api', () => ({
   listExecutions: jest.fn(),
 }));
 
-jest.mock('../../../../routes/routes', () => ({
-  Routes: {
-    WorkflowDetails: {
-      makeUrl: jest.fn(
-        (project: string, domain: string, name: string) =>
-          `/projects/${project}/domains/${domain}/workflows/${name}`,
-      ),
-    },
-    TaskDetails: {
-      makeUrl: jest.fn(
-        (project: string, domain: string, name: string) =>
-          `/projects/${project}/domains/${domain}/tasks/${name}`,
-      ),
-    },
-    ExecutionDetails: {
-      makeUrl: jest.fn(
-        ({ project, domain, name }: { project: string; domain: string; name: string }) =>
-          `/projects/${project}/domains/${domain}/executions/${name}`,
-      ),
-    },
-    EntityVersionDetails: {
-      makeUrl: jest.fn(),
-    },
-  },
+const mockFetchVersions = jest.fn();
+jest.mock('../fn', () => ({
+  fetchVersions: (...args: unknown[]) => mockFetchVersions(...args),
 }));
 
 const createMockExecutionWithDifferentNames = (): Execution => ({
@@ -88,10 +68,10 @@ const createMockTaskExecution = (): Execution => ({
   },
   spec: {
     launchPlan: {
-      resourceType: Core.ResourceType.LAUNCH_PLAN,
+      resourceType: Core.ResourceType.TASK,
       project: 'test-project',
       domain: 'development',
-      name: 'my-task-launch-plan',
+      name: 'my-actual-task',
       version: 'v1',
     },
     inputs: { literals: {} },
@@ -104,10 +84,10 @@ const createMockTaskExecution = (): Execution => ({
   },
   closure: {
     workflowId: {
-      resourceType: Core.ResourceType.TASK,
+      resourceType: Core.ResourceType.WORKFLOW,
       project: 'test-project',
       domain: 'development',
-      name: 'my-actual-task',
+      name: 'my-actual-task-single-task',
       version: 'v1',
     },
     phase: 3,
@@ -157,7 +137,7 @@ describe('executionContext breadcrumb functions', () => {
       } as any);
 
       expect(result).toBe('my-actual-task');
-      expect(result).not.toBe('my-task-launch-plan');
+      expect(result).not.toBe('my-actual-task-single-task');
     });
   });
 
@@ -227,7 +207,24 @@ describe('executionContext breadcrumb functions', () => {
 
       expect(result).toContain('my-actual-task');
       expect(result).toContain('/tasks/');
-      expect(result).not.toContain('my-task-launch-plan');
+      expect(result).not.toContain('my-actual-task-single-task');
+    });
+
+    it('fetches workflow versions in the workflow project and domain', async () => {
+      mockGetExecution.mockResolvedValue(createMockExecutionWithDifferentNames());
+      mockFetchVersions.mockResolvedValue({ entities: [] });
+      const location = {
+        pathname: '/projects/execution-project/domains/execution-domain/executions/wf-execution-001',
+      } as Location;
+
+      await executionTaskWorkflowVersions(location, mockBreadcrumb as any);
+
+      expect(mockFetchVersions).toHaveBeenCalledWith({
+        project: 'workflow-project',
+        domain: 'workflow-domain',
+        name: 'hello_world_wf',
+        resourceType: Core.ResourceType.WORKFLOW,
+      });
     });
   });
 });
